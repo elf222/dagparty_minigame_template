@@ -13,11 +13,13 @@ const PlayerScript = preload("player.gd")
 
 const PLAYER_COUNT :int = 4
 const TIME_LIMIT_SECONDS :float = 10.0
+const TIME_PLAYER_SWITCH_ANIMATION_SECONDS :float = 0.15
 
 const SLOT_ACTIONS :Array[String] = ["left", "up", "right", "down"]
 
 var player_scene :PackedScene
 var players :Array[PlayerScript] = []
+var movement_tweens :Array[Tween] = []
 var rankings :Array[int] = []
 
 # -------------------------------------
@@ -25,8 +27,8 @@ var rankings :Array[int] = []
 # -------------------------------------
 
 func _ready() -> void:
-	var minigame_directory := scene_file_path.get_base_dir()
-	var player_scene_path := minigame_directory.path_join("player.tscn")
+	var minigame_directory :String = scene_file_path.get_base_dir() # necessary if you load scenes
+	var player_scene_path :String = minigame_directory.path_join("player.tscn") # necessary if you load scenes
 
 	player_scene = load(player_scene_path) as PackedScene
 
@@ -46,7 +48,7 @@ func _process(_delta :float) -> void:
 # -------------------------------------
 
 func _create_player(player_index: int) -> void:
-	var player := player_scene.instantiate() as PlayerScript
+	var player :PlayerScript = player_scene.instantiate()
 	var player_colour :Color= Global.PLAYER_COLOURS[player_index]
 
 	rankings.append(player_index)
@@ -58,6 +60,7 @@ func _create_player(player_index: int) -> void:
 	add_child(player)
 	
 func _create_players() -> void:
+	movement_tweens.resize(PLAYER_COUNT)
 	for player_index: int in range(PLAYER_COUNT):
 		_create_player(player_index)
 
@@ -65,11 +68,18 @@ func _create_players() -> void:
 # Logic and animations
 # -------------------------------------
 
-func _move_player(player: PlayerScript, destination: Vector2) -> void:
+func _animation_move_player(player_index: int, destination: Vector2) -> void:
+	var old_tween :Tween = movement_tweens[player_index]
+	if old_tween != null and old_tween.is_valid():
+		old_tween.kill()
+
+	var player :PlayerScript = players[player_index]
 	var movement_tween :Tween = create_tween()
+	
 	movement_tween.set_trans(Tween.TRANS_QUAD)
 	movement_tween.set_ease(Tween.EASE_OUT)
-	movement_tween.tween_property(player, "position", destination, 0.15)
+	movement_tween.tween_property(player, "position", destination, TIME_PLAYER_SWITCH_ANIMATION_SECONDS)
+	movement_tweens[player_index] = movement_tween
 
 func _swap_players(player_index: int, target_player_index: int) -> void:
 	if player_index == target_player_index:
@@ -80,8 +90,9 @@ func _swap_players(player_index: int, target_player_index: int) -> void:
 	
 	rankings[player_slot] = target_player_index
 	rankings[target_player_slot] = player_index
-	_move_player(players[player_index], slot_markers[target_player_slot].position)
-	_move_player(players[target_player_index], slot_markers[player_slot].position)
+	
+	_animation_move_player(player_index, slot_markers[target_player_slot].position)
+	_animation_move_player(target_player_index, slot_markers[player_slot].position)
 
 func _check_player_input() -> void:
 	for player_index: int in range(PLAYER_COUNT):
@@ -98,4 +109,4 @@ func _check_player_input() -> void:
 func _on_round_timer_timeout() -> void:
 	timer_label.text = "Time's up!"
 	await get_tree().create_timer(2.0).timeout
-	Global.end_minigame(rankings)
+	Global.end_minigame(rankings) # necessary to finish the game, ranking is array player idx(0-3) -> position
