@@ -20,6 +20,9 @@ var player_scene :PackedScene
 var players :Array[PlayerScript] = []
 var rankings :Array[int] = []
 
+# -------------------------------------
+# Godot callbacks
+# -------------------------------------
 
 func _ready() -> void:
 	var minigame_directory := scene_file_path.get_base_dir()
@@ -38,6 +41,9 @@ func _process(_delta :float) -> void:
 	timer_label.text = "Time: %.1f" % round_timer.time_left
 	_check_player_input()
 
+# -------------------------------------
+# Setup functions
+# -------------------------------------
 
 func _create_player(player_index: int) -> void:
 	var player := player_scene.instantiate() as PlayerScript
@@ -50,11 +56,14 @@ func _create_player(player_index: int) -> void:
 	players.append(player)
 	
 	add_child(player)
-
 	
 func _create_players() -> void:
 	for player_index: int in range(PLAYER_COUNT):
 		_create_player(player_index)
+
+# -------------------------------------
+# Logic and animations
+# -------------------------------------
 
 func _move_player(player: PlayerScript, destination: Vector2) -> void:
 	var movement_tween :Tween = create_tween()
@@ -81,7 +90,11 @@ func _check_player_input() -> void:
 			if Input.is_action_just_pressed(action_name):
 				_swap_players(player_index, target_player_index)
 
-  
+
+# -------------------------------------
+# Game end
+# -------------------------------------
+
 func _on_round_timer_timeout() -> void:
 	timer_label.text = "Time's up!"
 	await get_tree().create_timer(2.0).timeout
