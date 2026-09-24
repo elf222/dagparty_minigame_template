@@ -1,5 +1,4 @@
 extends Node2D
-class_name Player
 
 const CIRCLE_RADIUS: float = 42.0
 
